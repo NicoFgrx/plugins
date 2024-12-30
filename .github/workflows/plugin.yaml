@@ -1,0 +1,34 @@
+name: CI - Plugin
+
+on: 
+  push: # remove on PR 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      plugins: ${{ steps.step1.outputs.folders }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - id: step1
+        run: |
+          # Generate a space-separated list of directories
+          folders=$(find . -mindepth 1 -maxdepth 1 -type d | sed 's|^\./||' | grep -v .git | tr '\n' ' ')
+          echo "folders=$folders" >> "$GITHUB_OUTPUT"
+
+  tests:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Process Plugins
+        run: |
+          plugins="${{ needs.build.outputs.plugins }}"
+          for plugin in $plugins; do
+            echo "Processing plugin: $plugin"
+            docker run -v $plugin:/opt/CTFd/CTFd/plugin/$plugin ctfd/ctfd:latest
+          done
